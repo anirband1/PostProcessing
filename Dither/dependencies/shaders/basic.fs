@@ -14,19 +14,19 @@ const float INTENSITY = 0.1;
 
 const int numOfColors = 8;
 
-const int bayer4[4*4] = int[4*4] (
-    0, 8, 2, 10,
-    12, 4, 14, 6,
-    3, 11, 1, 9,
-    15, 7, 13, 5
-);
+const int bayer4[4 * 4] = int[4 * 4](
+        0, 8, 2, 10,
+        12, 4, 14, 6,
+        3, 11, 1, 9,
+        15, 7, 13, 5
+    );
 
 const int DIM = 4;
 
 int roundInt(float num)
 {
     int integer = int(num);
-    if(abs(num - integer) < 0.5)
+    if (abs(num - integer) < 0.5)
         return int(num);
     else
         return int(num + 0.5);
@@ -55,16 +55,16 @@ void main()
     int mapX = int(TexCoord.x * width) % DIM;
     int mapY = int(TexCoord.y * height) % DIM;
 
-    int mapValue = bayer4[4*mapY + mapX];
-    float noise = INTENSITY * (mapValue/pow(DIM, 2) - 0.5);
+    int mapValue = bayer4[4 * mapY + mapX];
+    float noise = INTENSITY * (mapValue / pow(DIM, 2) - 0.5);
 
     vec3 color = texture(imageTexture1, TexCoord).rgb + vec3(noise);
 
     // ACEROLA QUANTIZE
 
-    color = floor(color * (numOfColors - 1) + 0.5)/(numOfColors - 1);
+    color = floor(color * (numOfColors - 1) + 0.5) / (numOfColors - 1);
 
     // MY QUANTIZE
-    
+
     FragColor = vec4(color, 1.0);
-} 
+}
