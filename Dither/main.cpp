@@ -12,10 +12,12 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window);
 
 // settings
-const unsigned int SCR_WIDTH = 960;
-const unsigned int SCR_HEIGHT = 640;
+unsigned int screenWidth = 960;
+unsigned int screenHeight = 640;
 
 const char *PATH_TO_IMG = "media/forest.jpeg";
+
+bool needRedraw = true;
 
 float clamp(float val, float min, float max)
 {
@@ -58,6 +60,23 @@ void imgToTexID(const char *filename, unsigned int *texture, GLint wrapMode)
     stbi_image_free(data);
 }
 
+Shader *ditherShader = nullptr;
+
+void Draw(unsigned int texture)
+{
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    ditherShader->use();
+    ditherShader->setInt("imageTexture1", 0);
+    ditherShader->setInt("width", screenWidth);
+    ditherShader->setInt("height", screenHeight);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
 int main()
 {
 #pragma region 'glfw: initialize and configure'
@@ -73,7 +92,7 @@ int main()
 
     // glfw window creation
     // --------------------
-    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "OpenGL", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(screenWidth, screenHeight, "OpenGL", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -95,9 +114,13 @@ int main()
     }
 #pragma endregion
 
-    // build and compile our shader program
-    Shader shaderProgram("dependencies/shaders/basic.vs", "dependencies/shaders/basic.fs");
+#pragma region 'shaders'
 
+    ditherShader = new Shader("dependencies/shaders/dither.vs", "dependencies/shaders/dither.fs");
+
+#pragma endregion
+
+#pragma region arrays and buffers
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
 
@@ -117,9 +140,9 @@ int main()
 
     // + ---------------------------------------------------
 
-    int numIndices = sizeof(indices) / sizeof(indices[0]);
+    // int numIndices = sizeof(indices) / sizeof(indices[0]);
 
-    unsigned int VBO, EBO, VAO;
+    unsigned int VAO, VBO, EBO;
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -142,45 +165,41 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+#pragma endregion
+
     // TEXTURES
 
-    unsigned int texture1;
+    unsigned int forestTexture;
 
-    imgToTexID(PATH_TO_IMG, &texture1, GL_REPEAT);
+    imgToTexID(PATH_TO_IMG, &forestTexture, GL_REPEAT);
 
     // render loop
     // -----------
 
-    shaderProgram.use();
-    shaderProgram.setInt("imageTexture1", 0);
-    shaderProgram.setInt("width", SCR_WIDTH);
-    shaderProgram.setInt("height", SCR_HEIGHT);
+    glBindVertexArray(VAO);
 
     while (!glfwWindowShouldClose(window))
     {
+        glClearColor(0.09f, 0.11f, 0.13f, 1.0f);
         processInput(window);
 
-        glClearColor(0.09f, 0.11f, 0.13f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-        glBindVertexArray(VAO);
+        if (needRedraw)
+        {
+            std::cout << "redraw" << '\n';
+            Draw(forestTexture);
+            needRedraw = false;
+            glfwSwapBuffers(window);
+        }
 
         // shaderProgram.setInt("kernelSize", kernelSize);
 
-        glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
-
-        glBindVertexArray(0); // no need to unbind it every time
-
-        glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
 
-    shaderProgram.del();
+    ditherShader->del();
 
     glfwTerminate();
     return 0;
@@ -195,4 +214,7 @@ void processInput(GLFWwindow *window)
 void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
+    screenWidth = width;
+    screenHeight = height;
+    needRedraw = true;
 }
