@@ -19,6 +19,11 @@ const char *PATH_TO_IMG = "media/forest.jpeg";
 
 bool needRedraw = true;
 
+// FPS tracking variables
+double lastTime = 0.0;
+int frameCount = 0;
+double lastFPSTime = 0.0;
+
 float clamp(float val, float min, float max)
 {
     val = val < min ? min : val;
@@ -61,6 +66,34 @@ void imgToTexID(const char *filename, unsigned int *texture, GLint wrapMode)
 }
 
 Shader *ditherShader = nullptr;
+
+void showFPS(GLFWwindow *window)
+{
+    double currentTime = glfwGetTime();
+    double delta = currentTime - lastFPSTime;
+    frameCount++;
+
+    // Update FPS every second
+    if (delta >= 0.5)
+    {
+        double fps = frameCount / delta;
+        double ms = 1000.0 / fps;
+
+        // Update window title with FPS info
+        std::stringstream ss;
+        ss << "Dither - "
+           << std::fixed << std::setprecision(0)
+           << fps << " FPS" << std::setprecision(5)
+           << "(" << ms << " ms)";
+        glfwSetWindowTitle(window, ss.str().c_str());
+
+        // Optional: Print to console
+        // std::cout << "FPS: " << fps << " | Frame Time: " << ms << " ms" << std::endl;
+
+        frameCount = 0;
+        lastFPSTime = currentTime;
+    }
+}
 
 void Draw(unsigned int texture)
 {
@@ -167,16 +200,19 @@ int main()
 
 #pragma endregion
 
-    // TEXTURES
+#pragma region TEXTURES
 
     unsigned int forestTexture;
 
     imgToTexID(PATH_TO_IMG, &forestTexture, GL_REPEAT);
 
-    // render loop
-    // -----------
-
     glBindVertexArray(VAO);
+
+#pragma endregion
+
+    lastFPSTime = glfwGetTime();
+
+    // + Render Loop
 
     while (!glfwWindowShouldClose(window))
     {
@@ -190,6 +226,8 @@ int main()
             needRedraw = false;
             glfwSwapBuffers(window);
         }
+
+        showFPS(window);
 
         // shaderProgram.setInt("kernelSize", kernelSize);
 
@@ -214,7 +252,7 @@ void processInput(GLFWwindow *window)
 void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
-    screenWidth = width;
-    screenHeight = height;
+    screenWidth = width / 2;   // retina display ugh
+    screenHeight = height / 2; // retina display ugh
     needRedraw = true;
 }
